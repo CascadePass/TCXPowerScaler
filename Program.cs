@@ -58,10 +58,16 @@ namespace TcxPowerScaler
         /// <param name="filename">The name of the file to process.</param>
         public static void UpdateFile(string filename)
         {
+            long pointCount = 0, totalKJ = 0;
+
             Console.WriteLine(filename);
 
-            XmlDocument data = new XmlDocument();
-            data.Load(filename);
+            XmlDocument data = Program.GetXml(filename);
+
+            if (data == null)
+            {
+                return;
+            }
 
             XmlNamespaceManager nsmgr = new XmlNamespaceManager(data.NameTable);
             nsmgr.AddNamespace("ns3", "http://www.garmin.com/xmlschemas/ActivityExtension/v2");
@@ -72,13 +78,19 @@ namespace TcxPowerScaler
             {
                 if (double.TryParse(node.InnerText, out double rawOriginalPower))
                 {
+                    pointCount += 1;
                     double newPower = Math.Round(rawOriginalPower * Program.ScaleFactor);
                     node.InnerText = newPower.ToString();
+                    totalKJ += (long)newPower;
 
-                    if(Debugger.IsAttached)
+                    if (Debugger.IsAttached)
                     {
                         Console.WriteLine($"{rawOriginalPower} -> {newPower}");
                     }
+                }
+                else
+                {
+                    Program.DisplayWarning($"{node.InnerText} is not valid for watts and will be ignored.");
                 }
             }
 
@@ -86,11 +98,55 @@ namespace TcxPowerScaler
 
             if (File.Exists(newFilename))
             {
-                newFilename = $"{newFilename}.{Guid.NewGuid().ToString().Replace("-", string.Empty)}";
+                newFilename = $"{filename}.original.{Guid.NewGuid().ToString().Replace("-", string.Empty)}";
             }
 
             File.Copy(filename, newFilename);
             data.Save(filename);
+            Console.WriteLine($"\t{totalKJ.ToString("#,##0")} total KJ in {pointCount.ToString("#,##0")} points, averaging {totalKJ / pointCount} watts.");
+            Console.WriteLine();
+        }
+
+        /// <summary>
+        /// Parses the xml in a file and returns an <see cref="XmlDocument"/> with the contents.
+        /// </summary>
+        /// <param name="filename">The name of the file to parse.</param>
+        /// <returns>An <see cref="XmlDocument"/> if the file contains parsable data, or null.</returns>
+        private static XmlDocument GetXml(string filename)
+        {
+            if (!File.Exists(filename))
+            {
+                Program.DisplayError($"{filename} does not exist.");
+                return null;
+            }
+
+            XmlDocument data = new XmlDocument() { PreserveWhitespace = true };
+            string xmlData = File.ReadAllText(filename);
+
+            if (string.IsNullOrEmpty(xmlData))
+            {
+                return null;
+            }
+
+            // The XML declaration must be the first node in the document,
+            // and no white space characters are allowed to appear before it.
+            // "Cadence iPhone App" writes leading white space when exporing a
+            // TCX file and its output must be trimmed to be compatible with
+            // MSXML.
+
+            xmlData = xmlData.Trim();
+
+            try
+            {
+                data.LoadXml(xmlData);
+            }
+            catch (XmlException xmlEx)
+            {
+                Program.DisplayError(xmlEx.Message);
+                return null;
+            }
+
+            return data;
         }
 
         /// <summary>
@@ -165,6 +221,30 @@ namespace TcxPowerScaler
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Displays an error to the user.
+        /// </summary>
+        /// <param name="message">A message to display.</param>
+        private static void DisplayError(string message)
+        {
+            var currentColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(message);
+            Console.ForegroundColor = currentColor;
+        }
+
+        /// <summary>
+        /// Displays a warning to the user.
+        /// </summary>
+        /// <param name="message">A message to display.</param>
+        private static void DisplayWarning(string message)
+        {
+            var currentColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine(message);
+            Console.ForegroundColor = currentColor;
         }
     }
 
