@@ -1,8 +1,36 @@
 # TCXPowerScaler
 
-Adjust power values in TCX cycling activity files by a fixed percentage.
+TCXPowerScaler is a command-line utility that adjusts power values in Garmin TCX activity files. It is useful when you need to uniformly scale recorded power data after calibration changes, or equipment differences.
 
-TCXPowerScaler is a small command-line utility that scales every power reading in a .tcx file and writes the results to a new file. It was created to solve a practical problem for cyclists who need to correct, normalize, or recalibrate power data across many ride recordings.
+# Features
+
+* Batch-processes all .tcx files in a folder.
+* Preserves the original file before making changes.
+* Before a file is modified, the original file is copied to: filename.tcx.original
+* Supports command-line automation.
+* Supports interactive entry of the scaling factor when not provided on the command line.
+
+# Usage
+
+## Interactive Mode
+
+Run the executable without arguments:  TCXPowerScaler.exe
+
+The application will:
+
+* Use the current directory as the working folder.
+* Prompt for a scaling factor.
+* Process all .tcx files in that folder.
+
+## CLI Mode
+
+**TCXPowerScaler.exe scale:1.05**
+
+Adjusts all TCX files in the current folder, adding 5% to each power reading.
+
+**TCXPowerScaler.exe scale:0.97 folder:C:\Activities**
+
+Adjusts all TCX files in C:\Activities, subtracting 3% from each power reading.
 
 <img width="1536" height="1024" alt="PowerMeters" src="https://github.com/user-attachments/assets/21a95797-e1f3-468f-989d-ea57338a7dbe" />
 
